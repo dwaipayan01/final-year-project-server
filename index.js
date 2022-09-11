@@ -15,11 +15,19 @@ async function run(){
   try{
     await client.connect();
     const packageCollection = client.db("lastProject").collection("packages");
+    const bookingCollection = client.db("lastProject").collection("tourBooking");
     app.get("/product", async (req, res) => {
       const query = {};
       const cursor = packageCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
+  });
+  app.get("/booking",async(req,res)=>{
+    const email=req.query.email;
+    console.log(email);
+    const query={email:email};
+    const bookings=await bookingCollection.find(query).toArray();
+    res.send(bookings);
   });
   app.get("/product/:id", async (req, res) => {
     const id = req.params.id;
@@ -27,6 +35,16 @@ async function run(){
     const service = await packageCollection.findOne(query);
     res.send(service);
 });
+app.post("/booking",async (req,res)=>{
+   const booking=req.body;
+   const query={ date:booking.date, email:booking.email }
+   const exists=await bookingCollection.findOne(query);
+   if(exists){
+     return res.send({success:false, booking:exists})
+   }
+   const result=await bookingCollection.insertOne(booking);
+   return res.send({success:true ,result});
+})
   }
   finally{
 
