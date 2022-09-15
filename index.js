@@ -33,6 +33,17 @@ async function run(){
     const packageCollection = client.db("lastProject").collection("packages");
     const bookingCollection = client.db("lastProject").collection("tourBooking");
     const userCollection = client.db("lastProject").collection("users");
+
+    const verifyAdmin=async(req,res,next)=>{
+      const requester=req.decoded.email;
+      const requesterAccount=await userCollection.findOne({email:requester});
+      if(requesterAccount.role==='admin'){
+        next();
+      }
+      else{
+        res.status(403).send({message:"Forbidden access"});
+      }
+    }
     app.get("/product", async (req, res) => {
       const query = {};
       const cursor = packageCollection.find(query);
@@ -85,21 +96,14 @@ app.put("/user/:email",async(req,res)=>{
   const token=jwt.sign({email:email},process.env.ACCESS_TOKEN_SECRET,{ expiresIn: '1h' });
   res.send({result,token});
 });
-app.put("/user/admin/:email",verifyJwt,async(req,res)=>{
+app.put("/user/admin/:email",verifyJwt,verifyAdmin,async(req,res)=>{
   const email=req.params.email;
-  const requester=req.decoded.email;
-  const requesterAccount=await userCollection.findOne({email:requester});
-  if(requesterAccount.role==='admin'){
     const filter={email:email};
     const updateDoc = {
      $set: {role:'admin'},
    };
    const result=await userCollection.updateOne(filter,updateDoc);
    res.send(result);
-  }
-  else{
-    res.status(403).send({message:"Forbidden access"});
-  }
   
  
 });
@@ -112,6 +116,11 @@ app.delete("/user/:email",verifyJwt,async(req,res)=>{
   const query = { email:email };
   const result = await userCollection.deleteOne(query);
   res.send(result);
+});
+app.post("/data",verifyJwt,verifyAdmin,async(req,res)=>{
+   const information=req.body;
+   const result=await packageCollection.insertOne(information);
+   res.send(result);
 })
   }
   finally{
