@@ -73,6 +73,12 @@ app.get("/admin/:email",verifyJwt,async(req,res)=>{
   const user=await userCollection.findOne({email:email});
   const isAdmin=user.role==='admin';
   res.send({admin:isAdmin});
+});
+app.get("/booking/:id",verifyJwt,async (req,res)=>{
+  const id=req.params.id;
+  const query={_id:ObjectId(id)};
+  const booking=await bookingCollection.findOne(query);
+  res.send(booking);
 })
 app.post("/booking",async (req,res)=>{
    const booking=req.body;
@@ -121,7 +127,13 @@ app.post("/data",verifyJwt,verifyAdmin,async(req,res)=>{
    const information=req.body;
    const result=await packageCollection.insertOne(information);
    res.send(result);
-})
+});
+app.delete("/package/:id",verifyJwt,async(req,res)=>{
+  const id=req.params.id;
+  const query = { _id: ObjectId(id) };
+  const result = await packageCollection.deleteOne(query);
+  res.send(result);
+});
   }
   finally{
 
