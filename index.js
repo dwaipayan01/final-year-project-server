@@ -1,12 +1,15 @@
 const express=require("express");
 const cors=require("cors");
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const sgTransport=require('nodemailer-sendgrid-transport');
 const app=express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const port=process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 
 
@@ -33,6 +36,7 @@ async function run(){
     const packageCollection = client.db("lastProject").collection("packages");
     const bookingCollection = client.db("lastProject").collection("tourBooking");
     const userCollection = client.db("lastProject").collection("users");
+    const paymentCollection = client.db('lastProject').collection('payments');
 
     const verifyAdmin=async(req,res,next)=>{
       const requester=req.decoded.email;
@@ -44,6 +48,52 @@ async function run(){
         res.status(403).send({message:"Forbidden access"});
       }
     }
+    const option={
+      auth:{
+        api_key:process.env.EMAIL_SENDER_KEY
+      }
+    }
+    const emailClient=nodemailer.createTransport(sgTransport(option));
+    function sendConfirmationEmail(payment){
+      const {email,name,date,tourName}=payment;
+      var Senderemail = {
+        from: process.env.EMAIL_SENDER,
+        to: email,
+        subject: `Your Booking for ${tourName} confirmation`,
+        text: `Your Booking for ${tourName} is on ${date}  is Confirmed`,
+        html: `
+          <div>
+            <p> Hello ${name}, </p>
+            <h3>We received your payment.Your Appointment for ${tourName} is confirmed</h3>
+            <p>Looking forward to seeing you on ${date} .</p>
+            
+            <h3>Our Address</h3>
+            <p>Zindabazar,Sylher</p>
+            <p>Bangladesh</p>
+          </div>
+        `
+      };
+      emailClient.sendMail(Senderemail, function(err, info){
+        if (err ){
+          console.log(err);
+        }
+        else {
+          console.log('Message sent: ', info);
+        }
+    });
+
+    }
+    app.post('/create-payment-intent', verifyJwt, async (req, res) => {
+      const service = req.body;
+      const price = service.price;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: 'usd',
+          payment_method_types: ['card']
+      });
+      res.send({ clientSecret: paymentIntent.client_secret })
+  });
     app.get("/product", async (req, res) => {
       const query = {};
       const cursor = packageCollection.find(query);
@@ -62,6 +112,22 @@ async function run(){
       return res.status(403).send({message:"Forbidden access"});
     }
   });
+  app.patch('/booking/:id', verifyJwt, async(req, res) =>{
+    const id  = req.params.id;
+    const payment = req.body;
+    const filter = {_id: ObjectId(id)};
+    const updatedDoc = {
+      $set: {
+        paid: true,
+        transactionId: payment.transactionId
+      }
+    }
+
+    const result = await paymentCollection.insertOne(payment);
+    const updatedBooking = await bookingCollection.updateOne(filter, updatedDoc);
+    sendConfirmationEmail(payment);
+    res.send(updatedBooking);
+  })
   app.get("/product/:id", async (req, res) => {
     const id = req.params.id;
     const query = { _id: ObjectId(id) };
