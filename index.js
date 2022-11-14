@@ -37,6 +37,7 @@ async function run(){
     const bookingCollection = client.db("lastProject").collection("tourBooking");
     const userCollection = client.db("lastProject").collection("users");
     const paymentCollection = client.db('lastProject').collection('payments');
+    const informationCollection = client.db('lastProject').collection('information');
 
     const verifyAdmin=async(req,res,next)=>{
       const requester=req.decoded.email;
@@ -156,6 +157,12 @@ app.post("/booking",async (req,res)=>{
    const result=await bookingCollection.insertOne(booking);
    return res.send({success:true ,result});
 });
+app.post("/information",verifyJwt,async(req,res)=>{
+  const information=req.body;
+  const result=await informationCollection.insertOne(information);
+   res.send({success:true ,result});
+
+})
 app.put("/user/:email",async(req,res)=>{
    const email=req.params.email;
    const user=req.body;
