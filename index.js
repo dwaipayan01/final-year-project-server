@@ -38,6 +38,7 @@ async function run(){
     const userCollection = client.db("lastProject").collection("users");
     const paymentCollection = client.db('lastProject').collection('payments');
     const informationCollection = client.db('lastProject').collection('information');
+    const reviewCollection = client.db('lastProject').collection('reviews');
 
     const verifyAdmin=async(req,res,next)=>{
       const requester=req.decoded.email;
@@ -162,6 +163,12 @@ app.post("/information",verifyJwt,async(req,res)=>{
   const result=await informationCollection.insertOne(information);
    res.send({success:true ,result});
 
+});
+app.post("/review",verifyJwt,async(req,res)=>{
+  const review=req.body;
+  const result=await reviewCollection.insertOne(review);
+   res.send({success:true ,result});
+
 })
 app.put("/user/:email",async(req,res)=>{
    const email=req.params.email;
@@ -183,6 +190,49 @@ app.put("/user/admin/:email",verifyJwt,verifyAdmin,async(req,res)=>{
    };
    const result=await userCollection.updateOne(filter,updateDoc);
    res.send(result);
+  
+ 
+});
+app.put("/package/:id",verifyJwt,async(req,res)=>{
+  const id=req.params.id;
+  const updatedUser=req.body;
+  console.log(updatedUser);
+  const filter={_id:ObjectId(id)};
+  const options={upsert : true}
+    const updateDoc = {
+     $set: {
+                
+      picture:updatedUser.picture,
+      name:updatedUser.name,
+      price:updatedUser.price,
+      review:updatedUser.review,
+      pacage:updatedUser.pacage,
+      location:updatedUser.location
+     },
+   };
+   const result=await packageCollection.updateOne(filter,updateDoc,options);
+   res.send(result);
+  });
+
+   app.put("/profile/:email",verifyJwt,async(req,res)=>{
+    const email=req.params.email;
+    const updatedUser=req.body;
+    const filter={email:email};
+    
+    const options={upsert : true}
+      const updateDoc = {
+       $set: {
+                  
+       
+        name:updatedUser.name,
+        email:updatedUser.email,
+        address:updatedUser.address,
+        number:updatedUser.number,
+        gender:updatedUser.gender
+       },
+     };
+     const result=await userCollection.updateOne(filter,updateDoc,options);
+     res.send({success:true ,result});
   
  
 });
