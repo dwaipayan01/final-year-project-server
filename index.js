@@ -39,6 +39,7 @@ async function run(){
     const paymentCollection = client.db('lastProject').collection('payments');
     const informationCollection = client.db('lastProject').collection('information');
     const reviewCollection = client.db('lastProject').collection('reviews');
+    const hotelCollection = client.db('lastProject').collection('hotels');
 
     const verifyAdmin=async(req,res,next)=>{
       const requester=req.decoded.email;
@@ -161,6 +162,13 @@ app.post("/booking",async (req,res)=>{
 app.post("/information",verifyJwt,async(req,res)=>{
   const information=req.body;
   const result=await informationCollection.insertOne(information);
+   res.send({success:true ,result});
+
+});
+app.post("/hotelBooking",verifyJwt,async(req,res)=>{
+  const hotels=req.body;
+  console.log(hotels);
+  const result=await hotelCollection.insertOne(hotels);
    res.send({success:true ,result});
 
 });
